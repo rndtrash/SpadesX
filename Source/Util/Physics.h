@@ -26,58 +26,64 @@
 */
 
 // from vxl.h
-#define CHUNK 1023 //zlib buffer size
-#define VSIDSQM (VSIDSQ-1)
-#define MAXSCANDIST 128
-#define MAXSCANSQ (MAXSCANDIST*MAXSCANDIST)
-#define VOXSIZ (VSIDSQ*MAXZDIM)
-#define SCPITCH 128
-#define SQRT 0.70710678f
-#define MINERANGE 3
-#define MAXZDIM 64 //Maximum .VXL dimensions in z direction (height)
-#define MAXZDIMM (MAXZDIM-1)
-#define MAXZDIMMM (MAXZDIM-2)
-#define PORT 32887
-#define GRID_SIZE 64
-#define FALL_SLOW_DOWN 0.24f
+#define CHUNK                1023 // zlib buffer size
+#define VSIDSQM              (VSIDSQ - 1)
+#define MAXSCANDIST          128
+#define MAXSCANSQ            (MAXSCANDIST * MAXSCANDIST)
+#define VOXSIZ               (VSIDSQ * MAXZDIM)
+#define SCPITCH              128
+#define SQRT                 0.70710678f
+#define MINERANGE            3
+#define MAXZDIM              64 // Maximum .VXL dimensions in z direction (height)
+#define MAXZDIMM             (MAXZDIM - 1)
+#define MAXZDIMMM            (MAXZDIM - 2)
+#define PORT                 32887
+#define GRID_SIZE            64
+#define FALL_SLOW_DOWN       0.24f
 #define FALL_DAMAGE_VELOCITY 0.58f
-#define FALL_DAMAGE_SCALAR 4096
-#define MINERANGE 3
-#define WEAPON_PRIMARY 1
-#define PI 3.141592653589793f
-#define VSID 512 // maximum .VXL dimensions in both x & y direction
-#define VSIDM (VSID-1)
-#define VSIDSQ (VSID*VSID)
-#define CUBE_ARRAY_LENGTH 64
+#define FALL_DAMAGE_SCALAR   4096
+#define MINERANGE            3
+#define WEAPON_PRIMARY       1
+#define PI                   3.141592653589793f
+#define VSID                 512 // maximum .VXL dimensions in both x & y direction
+#define VSIDM                (VSID - 1)
+#define VSIDSQ               (VSID * VSID)
+#define CUBE_ARRAY_LENGTH    64
 
 #include <math.h>
 #include <stddef.h>
 
-//SpadesX
-#include "Enums.h"
-#include "Types.h"
+// SpadesX
 #include "../Server.h"
+#include "Types.h"
+
 #include <libvxl/libvxl.h>
 
-enum damage_index {BODY_TORSO, BODY_HEAD, BODY_ARMS, BODY_LEGS, BODY_MELEE};
+enum damage_index { BODY_TORSO, BODY_HEAD, BODY_ARMS, BODY_LEGS, BODY_MELEE };
 
 // globals to make porting easier
 float ftotclk;
 float fsynctics;
 
-struct Orientation
+typedef struct
+{
+    float x;
+    float y;
+    float z;
+} Vector;
+
+typedef struct
 {
     Vector f, s, h;
-};
+} Orientation;
 
-struct PlayerType
+typedef struct
 {
     Vector p, e, v, s, h, f;
-    int mf, mb, ml, mr, jump, crouch, sneak, sprint, primary_fire, 
-        secondary_fire;
-    float lastclimb;
-    int airborne, wade, alive, weapon;
-};
+    int    mf, mb, ml, mr, jump, crouch, sneak, sprint, primary_fire, secondary_fire;
+    float  lastclimb;
+    int    airborne, wade, alive, weapon;
+} PlayerType;
 
 /*struct GrenadeType
 {
@@ -85,7 +91,7 @@ struct PlayerType
 };*/
 
 /*inline void get_orientation(Orientation * o,
-                            float orientation_x, 
+                            float orientation_x,
                             float orientation_y,
                             float orientation_z)
 {
@@ -104,12 +110,12 @@ struct PlayerType
 
 float distance3d(float x1, float y1, float z1, float x2, float y2, float z2)
 {
-    return sqrtf(pow(x2-x1, 2) + pow(y2-y1,2) + pow(z2-z1,2));
+    return sqrtf(pow(x2 - x1, 2) + pow(y2 - y1, 2) + pow(z2 - z1, 2));
 }
 
 /*int validate_hit(float shooter_x, float shooter_y, float shooter_z,
-                 float orientation_x, float orientation_y, float orientation_z, 
-                 float ox, float oy, float oz, 
+                 float orientation_x, float orientation_y, float orientation_z,
+                 float ox, float oy, float oz,
                  float tolerance)
 {
     float cx, cy, cz, r, x, y;
@@ -135,13 +141,13 @@ float distance3d(float x1, float y1, float z1, float x2, float y2, float z2)
 }*/
 
 // silly VOXLAP function
-inline void ftol(float f, long *a)
+static inline void ftol(float f, long* a)
 {
-    *a = (long)f;
+    *a = (long) f;
 }
 
-//same as isvoxelsolid but water is empty && out of bounds returns true
-int clipbox(GameServer* server ,float x, float y, float z)
+// same as isvoxelsolid but water is empty && out of bounds returns true
+static inline int clipbox(GameServer* server, float x, float y, float z)
 {
     int sz;
 
@@ -149,26 +155,26 @@ int clipbox(GameServer* server ,float x, float y, float z)
         return 1;
     else if (z < 0)
         return 0;
-    sz = (int)z;
-    if(sz == 63)
-        sz=62;
+    sz = (int) z;
+    if (sz == 63)
+        sz = 62;
     else if (sz >= 64)
         return 1;
-    return libvxl_map_issolid(&server->map, (int)x, (int)y, sz);
+    return libvxl_map_issolid(&server->map, (int) x, (int) y, sz);
 }
 
-//same as isvoxelsolid() but with wrapping
-long isvoxelsolidwrap(GameServer* server, long x, long y, long z)
+// same as isvoxelsolid() but with wrapping
+static inline long isvoxelsolidwrap(GameServer* server, long x, long y, long z)
 {
     if (z < 0)
         return 0;
     else if (z >= 64)
         return 1;
-	return libvxl_map_issolid(&server->map ,(int)x & VSIDM, (int)y & VSIDM, z);
+    return libvxl_map_issolid(&server->map, (int) x & VSIDM, (int) y & VSIDM, z);
 }
 
-//same as isvoxelsolid but water is empty
-long clipworld(GameServer* server, long x, long y, long z)
+// same as isvoxelsolid but water is empty
+static inline long clipworld(GameServer* server, long x, long y, long z)
 {
     int sz;
 
@@ -176,14 +182,14 @@ long clipworld(GameServer* server, long x, long y, long z)
         return 0;
     if (z < 0)
         return 0;
-    sz = (int)z;
-    if(sz == 63)
-        sz=62;
+    sz = (int) z;
+    if (sz == 63)
+        sz = 62;
     else if (sz >= 63)
         return 1;
     else if (sz < 0)
         return 0;
-    return libvxl_map_issolid(&server->map ,(int)x, (int)y, sz);
+    return libvxl_map_issolid(&server->map, (int) x, (int) y, sz);
 }
 
 /*long can_see(float x0, float y0, float z0, float x1, float y1,
@@ -202,7 +208,7 @@ long clipworld(GameServer* server, long x, long y, long z)
     else if (c.x != a.x) {
         d.x =  1; f.x = a.x+1-x0; g.x = (x1-x0)*1024; cnt += c.x-a.x;
     }
-    else 
+    else
         f.x = g.x = 0;
     if (c.y <  a.y) {
         d.y = -1; f.y = y0-a.y;   g.y = (y0-y1)*1024; cnt += a.y-c.y;
@@ -265,7 +271,7 @@ long cast_ray(float x0, float y0, float z0, float x1, float y1,
     else if (c.x != a.x) {
         d.x =  1; f.x = a.x+1-x0; g.x = (x1-x0)*1024; cnt += c.x-a.x;
     }
-    else 
+    else
         f.x = g.x = 0;
     if (c.y <  a.y) {
         d.y = -1; f.y = y0-a.y;   g.y = (y0-y1)*1024; cnt += a.y-c.y;
@@ -315,33 +321,33 @@ long cast_ray(float x0, float y0, float z0, float x1, float y1,
 
 // original C code
 
-void reposition_player(PlayerType * p, Vector * position) 
+static inline void reposition_player(PlayerType* p, Vector* position)
 {
     float f; /* FIXME meaningful name */
 
     p->e = p->p = *position;
-    f = p->lastclimb-ftotclk; /* FIXME meaningful name */
-    if(f>-0.25f)
-        p->e.z += (f+0.25f)/0.25f;
+    f           = p->lastclimb - ftotclk; /* FIXME meaningful name */
+    if (f > -0.25f)
+        p->e.z += (f + 0.25f) / 0.25f;
 }
 
-inline void set_orientation_vectors(Vector * o, Vector * s, Vector * h)
+static inline void set_orientation_vectors(Vector* o, Vector* s, Vector* h)
 {
-    float f = sqrtf(o->x*o->x + o->y*o->y);
-    s->x = -o->y/f;
-    s->y = o->x/f;
-    h->x = -o->z*s->y;
-    h->y = o->z*s->x;
-    h->z = o->x*s->y - o->y*s->x;
+    float f = sqrtf(o->x * o->x + o->y * o->y);
+    s->x    = -o->y / f;
+    s->y    = o->x / f;
+    h->x    = -o->z * s->y;
+    h->y    = o->z * s->x;
+    h->z    = o->x * s->y - o->y * s->x;
 }
 
-void reorient_player(PlayerType * p, Vector * orientation)
+void reorient_player(PlayerType* p, Vector* orientation)
 {
     p->f = *orientation;
     set_orientation_vectors(orientation, &p->s, &p->h);
 }
 
-int try_uncrouch(PlayerType * p)
+int try_uncrouch(GameServer* server, PlayerType* p)
 {
     float x1 = p->p.x + 0.45f;
     float x2 = p->p.x - 0.45f;
@@ -350,199 +356,182 @@ int try_uncrouch(PlayerType * p)
     float z1 = p->p.z + 2.25f;
     float z2 = p->p.z - 1.35f;
 
-    //first check if player can lower feet (in midair)
-    if(p->airborne && !(
-        clipbox(x1, y1, z1) ||
-        clipbox(x1, y2, z1) ||
-        clipbox(x2, y1, z1) ||
-        clipbox(x2, y2, z1)))
-        return(1);
-    //then check if they can raise their head
-    else if(!(clipbox(x1, y1, z2) ||
-        clipbox(x1, y2, z2) ||
-        clipbox(x2, y1, z2) ||
-        clipbox(x2, y2, z2)))
+    // first check if player can lower feet (in midair)
+    if (p->airborne && !(clipbox(server, x1, y1, z1) || clipbox(server, x1, y2, z1) || clipbox(server, x2, y1, z1) ||
+                         clipbox(server, x2, y2, z1)))
+        return (1);
+    // then check if they can raise their head
+    else if (!(clipbox(server, x1, y1, z2) || clipbox(server, x1, y2, z2) || clipbox(server, x2, y1, z2) ||
+               clipbox(server, x2, y2, z2)))
     {
         p->p.z -= 0.9f;
         p->e.z -= 0.9f;
-        return(1);
+        return (1);
     }
-    return(0);
+    return (0);
 }
 
-//player movement with autoclimb
-void boxclipmove(PlayerType * p)
+// player movement with autoclimb
+void boxclipmove(GameServer* server, PlayerType* p)
 {
-	float offset, m, f, nx, ny, nz, z;
-	long climb = 0;
+    float offset, m, f, nx, ny, nz, z;
+    long  climb = 0;
 
-	f = fsynctics*32.f;
-	nx = f*p->v.x+p->p.x;
-	ny = f*p->v.y+p->p.y;
+    f  = fsynctics * 32.f;
+    nx = f * p->v.x + p->p.x;
+    ny = f * p->v.y + p->p.y;
 
-	if(p->crouch)
-	{
-		offset = 0.45f;
-		m = 0.9f;
-	}
-	else
-	{
-		offset = 0.9f;
-		m = 1.35f;
-	}
+    if (p->crouch) {
+        offset = 0.45f;
+        m      = 0.9f;
+    } else {
+        offset = 0.9f;
+        m      = 1.35f;
+    }
 
-	nz = p->p.z + offset;
+    nz = p->p.z + offset;
 
-	if(p->v.x < 0) f = -0.45f;
-	else f = 0.45f;
-	z=m;
-	while(z>=-1.36f && !clipbox(nx+f, p->p.y-0.45f, nz+z) && !clipbox(nx+f, p->p.y+0.45f, nz+z))
-		z-=0.9f;
-	if(z<-1.36f) p->p.x = nx;
-	else if(!p->crouch && p->f.z<0.5f && !p->sprint)
-	{
-		z=0.35f;
-		while(z>=-2.36f && !clipbox(nx+f, p->p.y-0.45f, nz+z) && !clipbox(nx+f, p->p.y+0.45f, nz+z))
-			z-=0.9f;
-		if(z<-2.36f)
-		{
-			p->p.x = nx;
-			climb=1;
-		}
-		else p->v.x = 0;
-	}
-	else p->v.x = 0;
+    if (p->v.x < 0)
+        f = -0.45f;
+    else
+        f = 0.45f;
+    z = m;
+    while (z >= -1.36f && !clipbox(server, nx + f, p->p.y - 0.45f, nz + z) &&
+           !clipbox(server, nx + f, p->p.y + 0.45f, nz + z))
+        z -= 0.9f;
+    if (z < -1.36f)
+        p->p.x = nx;
+    else if (!p->crouch && p->f.z < 0.5f && !p->sprint) {
+        z = 0.35f;
+        while (z >= -2.36f && !clipbox(server, nx + f, p->p.y - 0.45f, nz + z) &&
+               !clipbox(server, nx + f, p->p.y + 0.45f, nz + z))
+            z -= 0.9f;
+        if (z < -2.36f) {
+            p->p.x = nx;
+            climb  = 1;
+        } else
+            p->v.x = 0;
+    } else
+        p->v.x = 0;
 
-	if(p->v.y < 0) f = -0.45f;
-	else f = 0.45f;
-	z=m;
-	while(z>=-1.36f && !clipbox(p->p.x-0.45f, ny+f, nz+z) && !clipbox(p->p.x+0.45f, ny+f, nz+z))
-		z-=0.9f;
-	if(z<-1.36f) p->p.y = ny;
-	else if(!p->crouch && p->f.z<0.5f && !p->sprint && !climb)
-	{
-		z=0.35f;
-		while(z>=-2.36f && !clipbox(p->p.x-0.45f, ny+f, nz+z) && !clipbox(p->p.x+0.45f, ny+f, nz+z))
-			z-=0.9f;
-		if(z<-2.36f)
-		{
-			p->p.y = ny;
-			climb=1;
-		}
-		else p->v.y = 0;
-	}
-	else if(!climb)
-		p->v.y = 0;
+    if (p->v.y < 0)
+        f = -0.45f;
+    else
+        f = 0.45f;
+    z = m;
+    while (z >= -1.36f && !clipbox(server, p->p.x - 0.45f, ny + f, nz + z) &&
+           !clipbox(server, p->p.x + 0.45f, ny + f, nz + z))
+        z -= 0.9f;
+    if (z < -1.36f)
+        p->p.y = ny;
+    else if (!p->crouch && p->f.z < 0.5f && !p->sprint && !climb) {
+        z = 0.35f;
+        while (z >= -2.36f && !clipbox(server, p->p.x - 0.45f, ny + f, nz + z) &&
+               !clipbox(server, p->p.x + 0.45f, ny + f, nz + z))
+            z -= 0.9f;
+        if (z < -2.36f) {
+            p->p.y = ny;
+            climb  = 1;
+        } else
+            p->v.y = 0;
+    } else if (!climb)
+        p->v.y = 0;
 
-	if(climb)
-	{
-		p->v.x *= 0.5f;
-		p->v.y *= 0.5f;
-		p->lastclimb = ftotclk;
-		nz--;
-		m = -1.35f;
-	}
-	else
-	{
-		if(p->v.z < 0)
-			m=-m;
-		nz += p->v.z*fsynctics*32.f;
-	}
+    if (climb) {
+        p->v.x *= 0.5f;
+        p->v.y *= 0.5f;
+        p->lastclimb = ftotclk;
+        nz--;
+        m = -1.35f;
+    } else {
+        if (p->v.z < 0)
+            m = -m;
+        nz += p->v.z * fsynctics * 32.f;
+    }
 
-	p->airborne = 1;
+    p->airborne = 1;
 
-	if(clipbox(p->p.x-0.45f, p->p.y-0.45f, nz+m) ||
-		clipbox(p->p.x-0.45f, p->p.y+0.45f, nz+m) ||
-		clipbox(p->p.x+0.45f, p->p.y-0.45f, nz+m) ||
-		clipbox(p->p.x+0.45f, p->p.y+0.45f, nz+m))
-	{
-		if(p->v.z >= 0)
-		{
-			p->wade = p->p.z > 61;
-			p->airborne = 0;
-		}
-		p->v.z = 0;
-	}
-	else
-		p->p.z = nz-offset;
+    if (clipbox(server, p->p.x - 0.45f, p->p.y - 0.45f, nz + m) ||
+        clipbox(server, p->p.x - 0.45f, p->p.y + 0.45f, nz + m) ||
+        clipbox(server, p->p.x + 0.45f, p->p.y - 0.45f, nz + m) ||
+        clipbox(server, p->p.x + 0.45f, p->p.y + 0.45f, nz + m))
+    {
+        if (p->v.z >= 0) {
+            p->wade     = p->p.z > 61;
+            p->airborne = 0;
+        }
+        p->v.z = 0;
+    } else
+        p->p.z = nz - offset;
 
-	reposition_player(p, &p->p);
+    reposition_player(p, &p->p);
 }
 
-long move_player(PlayerType *p)
+long move_player(GameServer* server, PlayerType* p)
 {
-	float f, f2;
+    float f, f2;
 
-	//move player and perform simple physics (gravity, momentum, friction)
-	if(p->jump)
-	{
-		p->jump = 0;
-		p->v.z = -0.36f;
-	}
+    // move player and perform simple physics (gravity, momentum, friction)
+    if (p->jump) {
+        p->jump = 0;
+        p->v.z  = -0.36f;
+    }
 
-	f = fsynctics; //player acceleration scalar
-	if(p->airborne)
-		f *= 0.1f;
-	else if(p->crouch)
-		f *= 0.3f;
-	else if((p->secondary_fire && p->weapon == WEAPON_PRIMARY) || p->sneak)
-		f *= 0.5f;
-	else if(p->sprint)
-		f *= 1.3f;
+    f = fsynctics; // player acceleration scalar
+    if (p->airborne)
+        f *= 0.1f;
+    else if (p->crouch)
+        f *= 0.3f;
+    else if ((p->secondary_fire && p->weapon == WEAPON_PRIMARY) || p->sneak)
+        f *= 0.5f;
+    else if (p->sprint)
+        f *= 1.3f;
 
-	if((p->mf || p->mb) && (p->ml || p->mr))
-		f *= SQRT; //if strafe + forward/backwards then limit diagonal velocity
+    if ((p->mf || p->mb) && (p->ml || p->mr))
+        f *= SQRT; // if strafe + forward/backwards then limit diagonal velocity
 
-	if(p->mf)
-	{
-		p->v.x += p->f.x*f;
-		p->v.y += p->f.y*f;
-	}
-	else if(p->mb)
-	{
-		p->v.x -= p->f.x*f;
-		p->v.y -= p->f.y*f;
-	}
-	if(p->ml)
-	{
-		p->v.x -= p->s.x*f;
-		p->v.y -= p->s.y*f;
-	}
-	else if(p->mr)
-	{
-		p->v.x += p->s.x*f;
-		p->v.y += p->s.y*f;
-	}
+    if (p->mf) {
+        p->v.x += p->f.x * f;
+        p->v.y += p->f.y * f;
+    } else if (p->mb) {
+        p->v.x -= p->f.x * f;
+        p->v.y -= p->f.y * f;
+    }
+    if (p->ml) {
+        p->v.x -= p->s.x * f;
+        p->v.y -= p->s.y * f;
+    } else if (p->mr) {
+        p->v.x += p->s.x * f;
+        p->v.y += p->s.y * f;
+    }
 
-	f = fsynctics + 1;
-	p->v.z += fsynctics;
-	p->v.z /= f; //air friction
-	if(p->wade)
-		f = fsynctics*6.f + 1; //water friction
-	else if(!p->airborne)
-		f = fsynctics*4.f + 1; //ground friction
-	p->v.x /= f;
-	p->v.y /= f;
-	f2 = p->v.z;
-	boxclipmove(p);
-	//hit ground... check if hurt
-	if(!p->v.z && (f2 > FALL_SLOW_DOWN))
-	{
-		//slow down on landing
-		p->v.x *= 0.5f;
-		p->v.y *= 0.5f;
+    f = fsynctics + 1;
+    p->v.z += fsynctics;
+    p->v.z /= f; // air friction
+    if (p->wade)
+        f = fsynctics * 6.f + 1; // water friction
+    else if (!p->airborne)
+        f = fsynctics * 4.f + 1; // ground friction
+    p->v.x /= f;
+    p->v.y /= f;
+    f2 = p->v.z;
+    boxclipmove(server, p);
+    // hit ground... check if hurt
+    if (!p->v.z && (f2 > FALL_SLOW_DOWN)) {
+        // slow down on landing
+        p->v.x *= 0.5f;
+        p->v.y *= 0.5f;
 
-		//return fall damage
-		if(f2 > FALL_DAMAGE_VELOCITY)
-		{
-			f2 -= FALL_DAMAGE_VELOCITY;
-			return((long)(f2*f2*FALL_DAMAGE_SCALAR));
-		}
+        // return fall damage
+        if (f2 > FALL_DAMAGE_VELOCITY) {
+            f2 -= FALL_DAMAGE_VELOCITY;
+            return ((long) (f2 * f2 * FALL_DAMAGE_SCALAR));
+        }
 
-		return(-1); // no fall damage but play fall sound
-	}
+        return (-1); // no fall damage but play fall sound
+    }
 
-	return(0); //no fall damage
+    return (0); // no fall damage
 }
 /* Disable for now
 GrenadeType * create_grenade(Vector * p, Vector * v)
@@ -574,19 +563,19 @@ int move_grenade(GrenadeType * g)
     lp.x = (long)floor(g->p.x);
     lp.y = (long)floor(g->p.y);
     lp.z = (long)floor(g->p.z);
-    
+
     int ret = 0;
-    
+
     if(clipworld(lp.x, lp.y, lp.z))  //hit a wall
     {
         #define BOUNCE_SOUND_THRESHOLD 0.1f
-        
+
         ret = 1;
         if(fabs(g->v.x) > BOUNCE_SOUND_THRESHOLD ||
            fabs(g->v.y) > BOUNCE_SOUND_THRESHOLD ||
            fabs(g->v.z) > BOUNCE_SOUND_THRESHOLD)
             ret = 2; // play sound
-        
+
         LongVector lp2;
         lp2.x = (long)floor(fpos.x);
         lp2.y = (long)floor(fpos.y);
@@ -636,6 +625,6 @@ void destroy_player(PlayerType * player)
 
 void set_globals(float time, float dt)
 {
-    ftotclk = time;
+    ftotclk   = time;
     fsynctics = dt;
 }
