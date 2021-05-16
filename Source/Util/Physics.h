@@ -52,12 +52,11 @@
 
 #include <math.h>
 #include <stddef.h>
+#include <libvxl/libvxl.h>
 
 // SpadesX
 #include "../Structs.h"
 #include "Types.h"
-
-#include <libvxl/libvxl.h>
 
 enum damage_index { BODY_TORSO, BODY_HEAD, BODY_ARMS, BODY_LEGS, BODY_MELEE };
 
@@ -313,9 +312,9 @@ static inline void reposition_player(Server* server, uint8 playerID, Vector3f* p
     float f; /* FIXME meaningful name */
 
     server->player[playerID].movement.eyePos = server->player[playerID].movement.position = *position;
-    //f = server->player[playerID].lastclimb - ftotclk; /* FIXME meaningful name */
-    //if (f > -0.25f)
-    //    server->player[playerID].movement.eyePos.z += (f + 0.25f) / 0.25f;
+    f = server->player[playerID].lastclimb - ftotclk; /* FIXME meaningful name */
+    if (f > -0.25f)
+        server->player[playerID].movement.eyePos.z += (f + 0.25f) / 0.25f;
 }
 
 static inline void set_orientation_vectors(Vector3f* o, Vector3f* s, Vector3f* h)
@@ -427,7 +426,7 @@ void boxclipmove(Server* server, uint8 playerID)
     if (climb) {
         server->player[playerID].movement.velocity.x *= 0.5f;
         server->player[playerID].movement.velocity.y *= 0.5f;
-        //server->player[playerID].lastclimb = ftotclk;
+        server->player[playerID].lastclimb = ftotclk;
         nz--;
         m = -1.35f;
     } else {

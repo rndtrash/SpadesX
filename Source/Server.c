@@ -24,10 +24,8 @@
 #include <string.h>
 #include <time.h>
 
-	struct arg_struct {
-    Server* server;
-    uint8 playerID;
-	};
+unsigned long long updateTime;
+unsigned long long lastUpdateTime;
 
 static unsigned long long get_nanos(void) {
     struct timespec ts;
@@ -39,6 +37,7 @@ static void ServerInit(Server* server, uint32 connections, char* map)
 {
 	char team1[] = "Team A";
 	char team2[] = "Team B";
+	updateTime = lastUpdateTime = get_nanos();
 	server->protocol.numPlayers = 0;
 	server->protocol.maxPlayers = (connections <= 32) ? connections : 32;
 
@@ -239,9 +238,9 @@ static void ServerUpdate(Server* server, int timeout)
 		OnPlayerUpdate(server, playerID);
 		if (server->player[playerID].state == STATE_READY) {
 			unsigned long long time = get_nanos();
-			set_globals(0, 1); //Horrible but for testing only
-			move_player(server, playerID);
 			if (time - server->player[playerID].timeSinceLastWU >= (1000000000/server->player[playerID].ups)) {
+				set_globals(time/1000000000.f, (time - server->player[playerID].timeSinceLastWU) / 1000000000.f);
+				move_player(server, playerID);
 				SendWorldUpdate(server, playerID);
 				server->player[playerID].timeSinceLastWU = get_nanos();
 			}
