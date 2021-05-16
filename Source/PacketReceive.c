@@ -116,6 +116,7 @@ void ReceiveOrientationData(Server* server, uint8 playerID, DataStream* data)
 	server->player[playerID].rot.x = x * length;
 	server->player[playerID].rot.y = y * length;
 	server->player[playerID].rot.z = z * length;
+	reorient_player(server, playerID, &server->player[playerID].rot);
 }
 
 void ReceiveInputData(Server* server, uint8 playerID, DataStream* data)
