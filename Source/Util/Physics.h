@@ -484,11 +484,11 @@ long move_player(Server* server, uint8 playerID)
         server->player[playerID].movement.velocity.y -= server->player[playerID].movement.forwardOrientation.y * f;
     }
     if (server->player[playerID].movLeft) {
-        server->player[playerID].movement.velocity.x -= server->player[playerID].movement.strafemovement.x * f;
-        server->player[playerID].movement.velocity.y -= server->player[playerID].movement.strafemovement.y * f;
+        server->player[playerID].movement.velocity.x -= server->player[playerID].movement.strafeOrientation.x * f;
+        server->player[playerID].movement.velocity.y -= server->player[playerID].movement.strafeOrientation.y * f;
     } else if (server->player[playerID].movRight) {
-        server->player[playerID].movement.velocity.x += server->player[playerID].movement.strafemovement.x * f;
-        server->player[playerID].movement.velocity.y += server->player[playerID].movement.strafemovement.y * f;
+        server->player[playerID].movement.velocity.x += server->player[playerID].movement.strafeOrientation.x * f;
+        server->player[playerID].movement.velocity.y += server->player[playerID].movement.strafeOrientation.y * f;
     }
 
     f = fsynctics + 1;
