@@ -106,7 +106,6 @@ typedef struct {
 
     //Bellow this point is stuff used for calculating movement.
     Movement movement;
-    Orientation orientation;
     uint8 airborne;
     uint8 wade;
     float lastclimb;

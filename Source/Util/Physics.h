@@ -476,7 +476,7 @@ long move_player(Server* server, uint8 playerID)
     if ((server->player[playerID].movForward || server->player[playerID].movBackwards) && (server->player[playerID].movLeft || server->player[playerID].movRight))
         f *= SQRT; // if strafe + forward/backwards then limit diagonal velocity
 
-    if (server->player[playerID].movLeft) {
+    if (server->player[playerID].movForward) {
         server->player[playerID].movement.velocity.x += server->player[playerID].movement.forwardOrientation.x * f;
         server->player[playerID].movement.velocity.y += server->player[playerID].movement.forwardOrientation.y * f;
     } else if (server->player[playerID].movBackwards) {
@@ -484,11 +484,11 @@ long move_player(Server* server, uint8 playerID)
         server->player[playerID].movement.velocity.y -= server->player[playerID].movement.forwardOrientation.y * f;
     }
     if (server->player[playerID].movLeft) {
-        server->player[playerID].movement.velocity.x -= server->player[playerID].movement.strafeOrientation.x * f;
-        server->player[playerID].movement.velocity.y -= server->player[playerID].movement.strafeOrientation.y * f;
+        server->player[playerID].movement.velocity.x -= server->player[playerID].movement.strafemovement.x * f;
+        server->player[playerID].movement.velocity.y -= server->player[playerID].movement.strafemovement.y * f;
     } else if (server->player[playerID].movRight) {
-        server->player[playerID].movement.velocity.x += server->player[playerID].movement.strafeOrientation.x * f;
-        server->player[playerID].movement.velocity.y += server->player[playerID].movement.strafeOrientation.y * f;
+        server->player[playerID].movement.velocity.x += server->player[playerID].movement.strafemovement.x * f;
+        server->player[playerID].movement.velocity.y += server->player[playerID].movement.strafemovement.y * f;
     }
 
     f = fsynctics + 1;
