@@ -140,9 +140,9 @@ void ReceiveInputData(Server* server, uint8 playerID, DataStream* data)
 
 void ReceivePositionData(Server* server, uint8 playerID, DataStream* data)
 {
-	server->player[playerID].pos.x = ReadFloat(data);
-	server->player[playerID].pos.y = ReadFloat(data);
-	server->player[playerID].pos.z = ReadFloat(data);
+	server->player[playerID].movement.position.x = ReadFloat(data);
+	server->player[playerID].movement.position.y = ReadFloat(data);
+	server->player[playerID].movement.position.z = ReadFloat(data);
 }
 
 void ReceiveExistingPlayer(Server* server, uint8 playerID, DataStream* data)
@@ -277,11 +277,18 @@ void OnPacketReceived(Server* server, uint8 playerID, DataStream* data, ENetEven
 		
 		case PACKET_TYPE_WEAPON_INPUT:
 		{
+			uint8 mask = 1;
+			uint8 bits[8];
 			uint8 player = ReadByte(data);
 			uint8 wInput = ReadByte(data);
 			if (server->player[playerID].weaponClip >= 0) {
 				SendWeaponInput(server, playerID, wInput);
-				if (wInput == 1 || wInput == 3) {
+				for (int i = 0; i < 8; i++) {
+					bits[i] = (wInput >> i) & mask;
+				}
+				server->player[playerID].primary_fire = bits[0];
+				server->player[playerID].secondary_fire = bits[1];
+				if (server->player[playerID].primary_fire) {
 					server->player[playerID].weaponClip--;
 				}
 			}

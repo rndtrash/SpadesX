@@ -12,6 +12,7 @@
 #include "Protocol.h"
 #include "Packets.h"
 #include "PacketReceive.h"
+#include "Physics.h"
 
 #include <Compress.h>
 #include <DataStream.h>
@@ -238,6 +239,8 @@ static void ServerUpdate(Server* server, int timeout)
 		OnPlayerUpdate(server, playerID);
 		if (server->player[playerID].state == STATE_READY) {
 			unsigned long long time = get_nanos();
+			set_globals(0, 1); //Horrible but for testing only
+			move_player(server, playerID);
 			if (time - server->player[playerID].timeSinceLastWU >= (1000000000/server->player[playerID].ups)) {
 				SendWorldUpdate(server, playerID);
 				server->player[playerID].timeSinceLastWU = get_nanos();
