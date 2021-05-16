@@ -21,9 +21,9 @@ void SetPlayerRespawnPoint(Server* server, uint8 playerID)
 		server->player[playerID].movement.position.y = spawn->from.y + dy * ((float) rand() / (float) RAND_MAX);
 		server->player[playerID].movement.position.z = 62.f - 2.36f;
 
-		server->player[playerID].rot.x = 0.f;
-		server->player[playerID].rot.y = 0.f;
-		server->player[playerID].rot.z = 0.f;
+		server->player[playerID].orientation.forward.x = 0.f;
+		server->player[playerID].orientation.forward.y = 0.f;
+		server->player[playerID].orientation.forward.z = 0.f;
 
 		printf("respawn: %f %f %f\n", server->player[playerID].movement.position.x, server->player[playerID].movement.position.y, server->player[playerID].movement.position.z);
 	}

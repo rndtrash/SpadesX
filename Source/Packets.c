@@ -335,7 +335,7 @@ void SendWorldUpdate(Server* server, uint8 playerID)
 	for (uint8 j = 0; j < 32; ++j) {
 		if (playerToPlayerVisible(server, playerID, j)) {
 			WriteVector3f(&stream, server->player[j].movement.position);
-			WriteVector3f(&stream, server->player[j].rot);
+			WriteVector3f(&stream, server->player[j].orientation.forward);
 		}
 		else {
 			Vector3f empty;

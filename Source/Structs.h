@@ -78,7 +78,6 @@ typedef struct {
     Tool      item;
     uint32    kills;
     Color3i   color;
-    Vector3f  rot;
     char      name[17];
     ENetPeer* peer;
     uint8     respawnTime;
