@@ -468,7 +468,7 @@ long move_player(Server* server, uint8 playerID)
         f *= 0.1f;
     else if (server->player[playerID].crouching)
         f *= 0.3f;
-    else if ((server->player[playerID].secondary_fire && server->player[playerID].weapon == WEAPON_PRIMARY) || server->player[playerID].sneaking)
+    else if ((server->player[playerID].secondary_fire && server->player[playerID].item == 2) || server->player[playerID].sneaking) // Replace me later with ITEM_GUN
         f *= 0.5f;
     else if (server->player[playerID].sprinting)
         f *= 1.3f;
