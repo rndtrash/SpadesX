@@ -20,12 +20,14 @@ void updateMaster(Server* server) {
 }
 
 void* keepMasterAlive(void* serverVoid) {
+	while (1) {
 	Server *server = serverVoid;
 	if (server->master.enableMasterConnection == 1) {
 		if (time(NULL) - server->master.timeSinceLastSend >= 5) {
 		enet_host_service(server->master.client, &server->master.event, 0);
 		server->master.timeSinceLastSend = time(NULL);
 		}
+	}
 	}
 }
 

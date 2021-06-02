@@ -28,7 +28,7 @@ unsigned long long updateTime;
 unsigned long long lastUpdateTime;
 unsigned long long timeSinceStart;
 Server server;
-pthread_t thread[3];
+pthread_t thread[4];
 
 static unsigned long long get_nanos(void) {
     struct timespec ts;
@@ -37,11 +37,13 @@ static unsigned long long get_nanos(void) {
 }
 
 static void* calculatePhysics() {
-	updateTime = get_nanos();
-	if (updateTime - lastUpdateTime >= (1000000000/120)) {
-		updateMovementAndGrenades(&server, updateTime, lastUpdateTime, timeSinceStart);
-		lastUpdateTime = get_nanos();
-	} 
+	while (1) {
+		updateTime = get_nanos();
+		if (updateTime - lastUpdateTime >= (1000000000/120)) {
+			updateMovementAndGrenades(&server, updateTime, lastUpdateTime, timeSinceStart);
+			lastUpdateTime = get_nanos();
+		} 
+	}
 }
 
 static void ServerInit(Server* server, uint32 connections, char* map)
@@ -221,22 +223,24 @@ static void OnPlayerUpdate(Server* server, uint8 playerID)
 }
 
 static void* WorldUpdate() {
-	for (uint8 playerID = 0; playerID < server.protocol.maxPlayers; ++playerID) {
-		OnPlayerUpdate(&server, playerID);
-		if (server.player[playerID].state == STATE_READY) {
-			unsigned long long time = get_nanos();
-			if (time - server.player[playerID].timeSinceLastWU >= (1000000000/server.player[playerID].ups)) {
-				SendWorldUpdate(&server, playerID);
-				server.player[playerID].timeSinceLastWU = get_nanos();
+	while(1) {
+		for (uint8 playerID = 0; playerID < server.protocol.maxPlayers; ++playerID) {
+			OnPlayerUpdate(&server, playerID);
+			if (server.player[playerID].state == STATE_READY) {
+				unsigned long long time = get_nanos();
+				if (time - server.player[playerID].timeSinceLastWU >= (1000000000/server.player[playerID].ups)) {
+					SendWorldUpdate(&server, playerID);
+					server.player[playerID].timeSinceLastWU = get_nanos();
+				}
 			}
 		}
 	}
 }
 
-static void ServerUpdate(Server* server, int timeout)
+static void* ServerUpdate()
 {
 	ENetEvent event;
-	while (enet_host_service(server->host, &event, timeout) > 0) {
+	while (enet_host_service(server.host, &event, 0) > 0) {
 		uint8 bannedUser = 0;
 		uint8 playerID;
 		switch (event.type) {
@@ -271,65 +275,65 @@ static void ServerUpdate(Server* server, int timeout)
 				// check peer
 				// ...
 				// find next free ID
-				playerID = OnConnect(server);
+				playerID = OnConnect(&server);
 				if (playerID == 0xFF) {
 					enet_peer_disconnect_now(event.peer, REASON_SERVER_FULL);
 					STATUS("Server full. Kicking player");
 					break;
 				}
-				server->player[playerID].peer = event.peer;
+				server.player[playerID].peer = event.peer;
 				event.peer->data	   = (void*) ((size_t) playerID);
-				server->player[playerID].HP = 100;
-				uint32ToUint8(server, event, playerID);
-				printf("INFO: connected %u (%d.%d.%d.%d):%u, id %u\n", event.peer->address.host, server->player[playerID].ip[0], server->player[playerID].ip[1], server->player[playerID].ip[2], server->player[playerID].ip[3], event.peer->address.port, playerID);
+				server.player[playerID].HP = 100;
+				uint32ToUint8(&server, event, playerID);
+				printf("INFO: connected %u (%d.%d.%d.%d):%u, id %u\n", event.peer->address.host, server.player[playerID].ip[0], server.player[playerID].ip[1], server.player[playerID].ip[2], server.player[playerID].ip[3], event.peer->address.port, playerID);
 				break;
 			case ENET_EVENT_TYPE_DISCONNECT:
 				playerID				= (uint8)((size_t) event.peer->data);
-				SendPlayerLeft(server, playerID);
+				SendPlayerLeft(&server, playerID);
 				Vector3f empty = {0, 0, 0};
 				Vector3f forward = {1, 0, 0};
 				Vector3f height = {0, 0, 1};
 				Vector3f strafe = {0, 1, 0};
-				server->player[playerID].state  = STATE_DISCONNECTED;
-				server->player[playerID].queues = NULL;
-				server->player[playerID].ups = 60;
-				server->player[playerID].timeSinceLastWU = get_nanos();
-				server->player[playerID].input  = 0;
-				server->player[playerID].movement.eyePos = empty;
-				server->player[playerID].movement.forwardOrientation = forward;
-				server->player[playerID].movement.strafeOrientation = strafe;
-				server->player[playerID].movement.heightOrientation = height;
-				server->player[playerID].movement.position = empty;
-				server->player[playerID].movement.velocity = empty;
-				server->player[playerID].airborne = 0;
-				server->player[playerID].wade = 0;
-				server->player[playerID].lastclimb = 0;
-				server->player[playerID].movBackwards = 0;
-				server->player[playerID].movForward = 0;
-				server->player[playerID].movLeft = 0;
-				server->player[playerID].movRight = 0;
-				server->player[playerID].jumping = 0;
-				server->player[playerID].crouching = 0;
-				server->player[playerID].sneaking = 0;
-				server->player[playerID].sprinting = 0;
-				server->player[playerID].primary_fire = 0;
-				server->player[playerID].secondary_fire = 0;
-				server->player[playerID].canBuild = 1;
-				server->player[playerID].allowKilling = 1;
-				server->player[playerID].allowTeamKilling = 0;
-				server->player[playerID].muted = 0;
-				server->player[playerID].toldToMaster = 0;
-				memset(server->player[playerID].name, 0, 17);
-				server->protocol.numPlayers--;
-				if (server->master.enableMasterConnection == 1) {
-					updateMaster(server);
+				server.player[playerID].state  = STATE_DISCONNECTED;
+				server.player[playerID].queues = NULL;
+				server.player[playerID].ups = 60;
+				server.player[playerID].timeSinceLastWU = get_nanos();
+				server.player[playerID].input  = 0;
+				server.player[playerID].movement.eyePos = empty;
+				server.player[playerID].movement.forwardOrientation = forward;
+				server.player[playerID].movement.strafeOrientation = strafe;
+				server.player[playerID].movement.heightOrientation = height;
+				server.player[playerID].movement.position = empty;
+				server.player[playerID].movement.velocity = empty;
+				server.player[playerID].airborne = 0;
+				server.player[playerID].wade = 0;
+				server.player[playerID].lastclimb = 0;
+				server.player[playerID].movBackwards = 0;
+				server.player[playerID].movForward = 0;
+				server.player[playerID].movLeft = 0;
+				server.player[playerID].movRight = 0;
+				server.player[playerID].jumping = 0;
+				server.player[playerID].crouching = 0;
+				server.player[playerID].sneaking = 0;
+				server.player[playerID].sprinting = 0;
+				server.player[playerID].primary_fire = 0;
+				server.player[playerID].secondary_fire = 0;
+				server.player[playerID].canBuild = 1;
+				server.player[playerID].allowKilling = 1;
+				server.player[playerID].allowTeamKilling = 0;
+				server.player[playerID].muted = 0;
+				server.player[playerID].toldToMaster = 0;
+				memset(server.player[playerID].name, 0, 17);
+				server.protocol.numPlayers--;
+				if (server.master.enableMasterConnection == 1) {
+					updateMaster(&server);
 				}
 				break;
 			case ENET_EVENT_TYPE_RECEIVE:
 			{
 				DataStream stream = {event.packet->data, event.packet->dataLength, 0};
 				playerID		  = (uint8)((size_t) event.peer->data);
-				OnPacketReceived(server, playerID, &stream, event);
+				OnPacketReceived(&server, playerID, &stream, event);
 				enet_packet_destroy(event.packet);
 				break;
 			}
@@ -377,17 +381,21 @@ void StartServer(uint16 port, uint32 connections, uint32 channels, uint32 inBand
 		ConnectMaster(&server, port);
 	}
 	server.master.timeSinceLastSend = time(NULL);
-	while (1) {
-		pthread_create(&thread[0], NULL, calculatePhysics, NULL);
-		pthread_join(thread[0], NULL); // Physics must be calculated before we send WorldUpdate
-		ServerUpdate(&server, 0);
-		pthread_create(&thread[1], NULL, WorldUpdate, NULL);
-		pthread_create(&thread[2], NULL, keepMasterAlive, &server);
-		pthread_join(thread[1], NULL);
-		pthread_join(thread[2], NULL);
-		usleep(1); //otherwise we would run at 100% cpu usage all the time. Not exactly what we want :P
-	}
 
-	STATUS("Destroying server");
-	enet_host_destroy(server.host);
+	int rc;
+	rc = pthread_create(&thread[0], NULL, WorldUpdate, NULL);
+	if (rc) {
+		ERROR("Thread failed");
+	}
+	rc = pthread_create(&thread[1], NULL, calculatePhysics, NULL);
+	if (rc) {
+		ERROR("Thread failed");
+	}
+	rc = pthread_create(&thread[2], NULL, keepMasterAlive, &server);
+	if (rc) {
+		ERROR("Thread failed");
+	}
+	while (1) {
+		ServerUpdate();
+	}
 }
