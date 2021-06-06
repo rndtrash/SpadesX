@@ -225,7 +225,6 @@ static void OnPlayerUpdate(Server* server, uint8 playerID)
 static void* WorldUpdate() {
 	while(1) {
 		for (uint8 playerID = 0; playerID < server.protocol.maxPlayers; ++playerID) {
-			OnPlayerUpdate(&server, playerID);
 			if (server.player[playerID].state == STATE_READY) {
 				unsigned long long time = get_nanos();
 				if (time - server.player[playerID].timeSinceLastWU >= (1000000000/server.player[playerID].ups)) {
@@ -239,6 +238,12 @@ static void* WorldUpdate() {
 
 static void* ServerUpdate()
 {
+	for (uint8 playerID = 0; playerID < server.protocol.maxPlayers; ++playerID) {
+		if (server.player[playerID].state != STATE_DISCONNECTED) {
+			OnPlayerUpdate(&server, playerID);
+		}
+	}
+	
 	ENetEvent event;
 	while (enet_host_service(server.host, &event, 0) > 0) {
 		uint8 bannedUser = 0;
