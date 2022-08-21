@@ -2,6 +2,7 @@
 #ifndef PACKETS_H
 #define PACKETS_H
 
+#include "Events.h"
 #include "Structs.h"
 
 #include "Util/DataStream.h"

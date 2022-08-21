@@ -11,6 +11,20 @@
 #include <stdio.h>
 #include <string.h>
 
+#if 1
+
+#include "Events.h"
+
+int Hampter(uint8_t ID)
+{
+    (void) ID;
+
+    LOG_WARNING("hamptre");
+    return EVENT_CONTINUE;
+}
+
+#endif
+
 int main(void)
 {
     uint16      port;
@@ -111,6 +125,12 @@ int main(void)
         periodicMessage->string = periodicMessageString;
         DL_APPEND(periodicMessageList, periodicMessage);
     }
+
+#if 1
+
+    PlayerDisconnectSubscribe(Hampter, EVENT_LAST);
+
+#endif
 
     StartServer(port,
                 64,

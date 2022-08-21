@@ -1,6 +1,7 @@
 // Copyright DarkNeutrino 2021
 #include "../Extern/libmapvxl/libmapvxl.h"
 #include "Commands.h"
+#include "Packets.h"
 #include "ParseConvert.h"
 #include "Protocol.h"
 #include "Structs.h"
@@ -277,6 +278,9 @@ void sendPlayerLeft(Server* server, uint8 playerID)
     char ipString[17];
     formatIPToString(ipString, server->player[playerID].ipStruct);
     LOG_INFO("Player %s (%s, #%hhu) disconnected", server->player[playerID].name, ipString, playerID);
+
+    PlayerDisconnectRun(playerID);
+
     if (server->protocol.numPlayers == 0) {
         return;
     }

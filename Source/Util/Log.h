@@ -1,6 +1,8 @@
 #ifndef LOG_H
 #define LOG_H
 
+#include <stdio.h>
+
 void printfWithTime(const char *format, ...);
 
 #define LOG__INT(msg, ...) printfWithTime(msg "%s", __VA_ARGS__);
